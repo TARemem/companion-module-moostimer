@@ -1,4 +1,4 @@
-import { InstanceBase, InstanceStatus, Regex, runEntrypoint } from '@companion-module/base'
+import { InstanceBase, InstanceStatus, Regex } from '@companion-module/base'
 
 const fmt = (ms) => {
   const negative = ms < 0 ? '-' : ''
@@ -8,7 +8,7 @@ const fmt = (ms) => {
 const options = [
   { id: 'seconds', type: 'number', label: 'Seconds', default: 300, min: 0, max: 359999 },
 ]
-class MoosTimer extends InstanceBase {
+export default class MoosTimer extends InstanceBase {
   async init(config) {
     this.config = config
     this.state = null
@@ -181,4 +181,3 @@ class MoosTimer extends InstanceBase {
     })
   }
 }
-runEntrypoint(MoosTimer, [])
