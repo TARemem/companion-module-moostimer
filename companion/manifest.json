@@ -1,5 +1,7 @@
 {
   "id": "moostimer",
+  "type": "connection",
+  "legacyIds": [],
   "name": "MoosTimer",
   "shortname": "MoosTimer",
   "description": "Control MoosTimer countdown and presentation modes",
