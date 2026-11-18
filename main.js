@@ -20,6 +20,21 @@ export function parseDuration(value) {
   if (nums[1] > 59 || nums[2] > 59) throw new Error('Minutes and seconds must be 00–59')
   return nums[0] * 3600 + nums[1] * 60 + nums[2]
 }
+const colorNumber = (hex, fallback = 0x232b36) => /^#[0-9a-f]{6}$/i.test(hex || '') ? parseInt(hex.slice(1), 16) : fallback
+const timerColor = (state) => {
+  if (!state?.settings) return 0xffffff
+  const s = state.settings
+  let hex = s.white || '#ffffff'
+  if (!state.forceWhite && s.automaticColors && state.mode === 'down') {
+    hex = state.ms <= Number(s.redAt) * 1000 ? s.red : state.ms <= Number(s.yellowAt) * 1000 ? s.yellow : s.green
+  }
+  if (String(hex).toLowerCase() === String(s.background).toLowerCase()) hex = String(hex).toLowerCase() === '#ffffff' ? '#000000' : '#ffffff'
+  return colorNumber(hex, 0xffffff)
+}
+const splitTime = (ms) => {
+  const total = Math.floor(Math.abs(Number(ms) || 0) / 1000)
+  return { hours: String(Math.floor(total / 3600)).padStart(2, '0'), minutes: String(Math.floor(total / 60) % 60).padStart(2, '0'), seconds: String(total % 60).padStart(2, '0') }
+}
 const durationField = { id: 'duration', type: 'textinput', label: 'Duration (MM:SS or HH:MM:SS)', default: '05:00', useVariables: false }
 
 export default class MoosTimer extends InstanceBase {
@@ -28,6 +43,7 @@ export default class MoosTimer extends InstanceBase {
     this.state = null
     this.pollTimer = null
     this.inFlight = false
+    this.presetSignature = null
     this.initActions()
     this.initFeedbacks()
     this.initVariables()
@@ -86,8 +102,18 @@ export default class MoosTimer extends InstanceBase {
       blinking: state.blinking ? 'Yes' : 'No',
       end_time: state.endTime ? new Date(state.endTime).toLocaleTimeString('de-DE') : '—',
       preset_count: String(state.presets?.length || 0),
+      hours: splitTime(state.ms).hours,
+      minutes: splitTime(state.ms).minutes,
+      seconds: splitTime(state.ms).seconds,
+      timer_color: '#' + timerColor(state).toString(16).padStart(6, '0'),
+      logo_visible: state.settings?.showLogo ? 'Yes' : 'No',
     })
-    this.checkFeedbacks('running', 'display', 'blinking', 'countmode')
+    this.checkFeedbacks('running', 'paused', 'display', 'blinking', 'countmode', 'timercolor', 'logo')
+    const signature = JSON.stringify((state.presets || []).map(p => [p.name, p.seconds]))
+    if (signature !== this.presetSignature) {
+      this.presetSignature = signature
+      this.initPresets()
+    }
   }
   startPolling() {
     clearInterval(this.pollTimer)
@@ -96,7 +122,7 @@ export default class MoosTimer extends InstanceBase {
       if (this.inFlight) return
       this.inFlight = true
       try { this.updateState(await this.request('/api/state')) }
-      catch (e) { this.state = null; this.updateStatus(InstanceStatus.ConnectionFailure, e.message); this.checkFeedbacks('running', 'display', 'blinking', 'countmode') }
+      catch (e) { this.state = null; this.updateStatus(InstanceStatus.ConnectionFailure, e.message); this.checkFeedbacks('running', 'paused', 'display', 'blinking', 'countmode', 'timercolor', 'logo') }
       finally { this.inFlight = false }
     }
     void poll()
@@ -108,6 +134,7 @@ export default class MoosTimer extends InstanceBase {
       ['reset', 'Reset immediately (no confirmation)'], ['blink', 'Toggle blink'], ['white', 'Toggle force white'],
     ]
     const actions = Object.fromEntries(simple.map(([id, name]) => [id, { name, options: [], callback: () => this.command(id) }]))
+    actions.logo = { name: 'Toggle presentation logo (requires MoosTimer 1.0.12+)', options: [], callback: () => this.command('toggleLogo') }
     actions.display = {
       name: 'Set presentation display mode',
       options: [{ id: 'displayMode', type: 'dropdown', label: 'Display', default: 'timer', choices: [
@@ -166,6 +193,12 @@ export default class MoosTimer extends InstanceBase {
     this.setFeedbackDefinitions({
       running: bool('Timer is running', () => !!this.state?.running),
       blinking: bool('Timer is blinking', () => !!this.state?.blinking),
+      paused: bool('Timer is paused', () => !!this.state && !this.state.running),
+      logo: bool('Presentation logo is visible', () => !!this.state?.settings?.showLogo),
+      timercolor: {
+        type: 'advanced', name: 'Live timer color (uses presentation colors)', options: [],
+        callback: () => ({ bgcolor: timerColor(this.state), color: timerColor(this.state) === 0xffffff ? 0x000000 : 0xffffff }),
+      },
       display: {
         ...bool('Selected presentation mode is active', (ev) => this.state?.displayMode === ev.options.mode),
         options: [{ id: 'mode', type: 'dropdown', label: 'Mode', default: 'timer', choices: [
@@ -190,46 +223,67 @@ export default class MoosTimer extends InstanceBase {
       blinking: { name: 'Blink status' },
       end_time: { name: 'End time' },
       preset_count: { name: 'Number of presets' },
+      hours: { name: 'Hours (HH)' },
+      minutes: { name: 'Minutes (MM)' },
+      seconds: { name: 'Seconds (SS)' },
+      timer_color: { name: 'Timer color (hex)' },
+      logo_visible: { name: 'Presentation logo visible' },
     })
   }
   initPresets() {
-    // Companion module API 2.x expects two arguments: section structure and preset map.
-    const white = 0xffffff
-    const dark = 0x232b36
-    const green = 0x168a58
+    const white = 0xffffff, dark = 0x232b36, green = 0x168a58
     const make = (name, text, actionId, actionOptions = {}, feedbackId, feedbackOptions = {}) => ({
-      type: 'simple',
-      name,
+      type: 'simple', name,
       style: { text, size: 'auto', color: white, bgcolor: dark },
       steps: [{ down: [{ actionId, options: actionOptions }], up: [] }],
       feedbacks: feedbackId ? [{ feedbackId, options: feedbackOptions, style: { bgcolor: green, color: white } }] : [],
     })
+    const time = (name, text) => ({
+      type: 'simple', name,
+      style: { text, size: 'auto', color: white, bgcolor: dark },
+      steps: [{ down: [], up: [] }],
+      feedbacks: [{ feedbackId: 'timercolor', options: {} }],
+    })
     const presets = {
       start: make('Start', '▶ START', 'start', {}, 'running'),
-      pause: make('Pause', 'Ⅱ PAUSE', 'pause'),
+      pause: make('Pause', 'Ⅱ PAUSE', 'pause', {}, 'paused'),
       toggle: make('Start / Pause', 'START / PAUSE', 'toggle', {}, 'running'),
       reset: make('Reset immediately', '↺ RESET', 'reset'),
       timer: make('Timer display', 'TIMER', 'display', { displayMode: 'timer' }, 'display', { mode: 'timer' }),
       clock: make('Clock display', 'UHRZEIT', 'display', { displayMode: 'clock' }, 'display', { mode: 'clock' }),
       blackout: make('Blackout', 'BLACKOUT', 'display', { displayMode: 'blackout' }, 'display', { mode: 'blackout' }),
       blink: make('Blink', 'BLINKEN', 'blink', {}, 'blinking'),
+      white: make('Force white', 'WEISS', 'white'),
+      logo: make('Presentation logo (requires MoosTimer 1.0.12+)', 'MOOS LOGO', 'logo', {}, 'logo'),
       plus60: make('+1 minute', '+1 MIN', 'adjust', { duration: '01:00', direction: 'add' }),
       minus60: make('-1 minute', '-1 MIN', 'adjust', { duration: '01:00', direction: 'subtract' }),
       plus10: make('+10 seconds', '+10 SEK', 'adjust', { duration: '00:10', direction: 'add' }),
       minus10: make('-10 seconds', '-10 SEK', 'adjust', { duration: '00:10', direction: 'subtract' }),
-      time: {
-        type: 'simple',
-        name: 'Live remaining time',
-        style: { text: '$(moostimer:remaining)', size: 'auto', color: white, bgcolor: dark },
-        steps: [{ down: [], up: [] }],
-        feedbacks: [],
-      },
+      time: time('Full live timer', '$(moostimer:remaining)'),
+      hours: time('Hours', '$(moostimer:hours)'),
+      minutes: time('Minutes', '$(moostimer:minutes)'),
+      seconds: time('Seconds', '$(moostimer:seconds)'),
+    }
+    const fixed = [['5 Minuten',300],['10 Minuten',600],['15 Minuten',900],['20 Minuten',1200],['30 Minuten',1800],['45 Minuten',2700],['60 Minuten',3600]]
+    for (const [name, seconds] of fixed) {
+      const key = `fixed_${seconds}`
+      const duration = `${String(Math.floor(seconds / 60)).padStart(2,'0')}:00`
+      presets[key] = make(name, name.toUpperCase(), 'set', { duration })
+    }
+    const dynamic = []
+    for (const [index, item] of (this.state?.presets || []).entries()) {
+      if (!item || typeof item.name !== 'string' || !item.name.trim()) continue
+      const key = `saved_${index}`
+      presets[key] = make(`Saved: ${item.name}`, item.name, 'preset', { name: item.name })
+      dynamic.push(key)
     }
     const sections = [
       { id: 'transport', name: 'Timersteuerung', definitions: ['start', 'pause', 'toggle', 'reset'] },
-      { id: 'display', name: 'Anzeige', definitions: ['timer', 'clock', 'blackout', 'blink'] },
+      { id: 'display', name: 'Anzeige', definitions: ['timer', 'clock', 'blackout', 'blink', 'white', 'logo'] },
       { id: 'adjustments', name: 'Zeitkorrektur', definitions: ['plus60', 'minus60', 'plus10', 'minus10'] },
-      { id: 'status', name: 'Status', definitions: ['time'] },
+      { id: 'status', name: 'Live-Zeitanzeige', definitions: ['time', 'hours', 'minutes', 'seconds'] },
+      { id: 'fixed', name: 'Feste Zeiten', definitions: fixed.map(([,seconds]) => `fixed_${seconds}`) },
+      { id: 'saved', name: 'Gespeicherte MoosTimer-Presets', definitions: dynamic },
     ]
     this.setPresetDefinitions(sections, presets)
   }

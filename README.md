@@ -41,3 +41,9 @@ Die Presets sind nach Companion-Modul-API 2.x aufgebaut (`setPresetDefinitions(s
 Im Companion-Tab **Buttons → Presets** stehen die Kategorien Timersteuerung, Anzeige, Zeitkorrektur und Status bereit.
 Reset erfolgt ohne Rückfrage. Zeiteingaben für Aktionen verwenden MM:SS oder HH:MM:SS.
 Die Presets sind noch nicht in Companion 5.1.2 live getestet.
+
+## Version 0.1.4
+- Pause-Feedback, farbsynchronisierte Live-Zeit (gesamt und HH/MM/SS einzeln).
+- Feste Zeiten und dynamische Presets aus der MoosTimer-Regie. Änderungen werden beim nächsten Poll erkannt; ggf. Preset-Browser neu öffnen.
+- Logo-Toggle benötigt MoosTimer 1.0.12 oder neuer.
+- Individuelle Farben und Schwellwerte werden aus /api/state übernommen.
