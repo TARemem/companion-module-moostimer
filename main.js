@@ -252,5 +252,4 @@ export default class MoosTimer extends InstanceBase {
       },
     })
   }
-  }
 }
