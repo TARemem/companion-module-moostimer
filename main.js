@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs'
 import { InstanceBase, InstanceStatus, Regex } from '@companion-module/base'
 
+const logoPng = readFileSync(new URL('./logo-button.png', import.meta.url)).toString('base64')
+const logoTestPng = readFileSync(new URL('./logo-test-button.png', import.meta.url)).toString('base64')
 const fmt = (ms) => {
   const negative = ms < 0 ? '-' : ''
   const secs = Math.floor(Math.abs(ms) / 1000)
@@ -31,6 +34,8 @@ const timerColor = (state) => {
   if (String(hex).toLowerCase() === String(s.background).toLowerCase()) hex = String(hex).toLowerCase() === '#ffffff' ? '#000000' : '#ffffff'
   return colorNumber(hex, 0xffffff)
 }
+const presentationBackground = (state) => colorNumber(state?.settings?.background, 0x000000)
+
 const splitTime = (ms) => {
   const total = Math.floor(Math.abs(Number(ms) || 0) / 1000)
   return { hours: String(Math.floor(total / 3600)).padStart(2, '0'), minutes: String(Math.floor(total / 60) % 60).padStart(2, '0'), seconds: String(total % 60).padStart(2, '0') }
@@ -138,7 +143,7 @@ export default class MoosTimer extends InstanceBase {
     actions.display = {
       name: 'Set presentation display mode',
       options: [{ id: 'displayMode', type: 'dropdown', label: 'Display', default: 'timer', choices: [
-        { id: 'timer', label: 'Timer' }, { id: 'clock', label: 'Clock' }, { id: 'blackout', label: 'Blackout' },
+        { id: 'timer', label: 'Timer' }, { id: 'clock', label: 'Clock' }, { id: 'blackout', label: 'Blackout' }, { id: 'logo', label: 'Logo fullscreen test' },
       ] }],
       callback: (ev) => this.command('displayMode', { displayMode: ev.options.displayMode }),
     }
@@ -197,12 +202,12 @@ export default class MoosTimer extends InstanceBase {
       logo: bool('Presentation logo is visible', () => !!this.state?.settings?.showLogo),
       timercolor: {
         type: 'advanced', name: 'Live timer color (uses presentation colors)', options: [],
-        callback: () => ({ bgcolor: timerColor(this.state), color: timerColor(this.state) === 0xffffff ? 0x000000 : 0xffffff }),
+        callback: () => ({ bgcolor: presentationBackground(this.state), color: timerColor(this.state) }),
       },
       display: {
         ...bool('Selected presentation mode is active', (ev) => this.state?.displayMode === ev.options.mode),
         options: [{ id: 'mode', type: 'dropdown', label: 'Mode', default: 'timer', choices: [
-          { id: 'timer', label: 'Timer' }, { id: 'clock', label: 'Clock' }, { id: 'blackout', label: 'Blackout' },
+          { id: 'timer', label: 'Timer' }, { id: 'clock', label: 'Clock' }, { id: 'blackout', label: 'Blackout' }, { id: 'logo', label: 'Logo fullscreen test' },
         ] }],
       },
       countmode: {
@@ -240,7 +245,7 @@ export default class MoosTimer extends InstanceBase {
     })
     const time = (name, text) => ({
       type: 'simple', name,
-      style: { text, size: 'auto', color: white, bgcolor: dark },
+      style: { text, size: 'auto', color: white, bgcolor: 0x000000 },
       steps: [{ down: [], up: [] }],
       feedbacks: [{ feedbackId: 'timercolor', options: {} }],
     })
@@ -254,7 +259,8 @@ export default class MoosTimer extends InstanceBase {
       blackout: make('Blackout', 'BLACKOUT', 'display', { displayMode: 'blackout' }, 'display', { mode: 'blackout' }),
       blink: make('Blink', 'BLINKEN', 'blink', {}, 'blinking'),
       white: make('Force white', 'WEISS', 'white'),
-      logo: make('Presentation logo (requires MoosTimer 1.0.12+)', 'MOOS LOGO', 'logo', {}, 'logo'),
+      logo: { ...make('Toggle small presentation logo', '', 'logo', {}, 'logo'), style: { text: '', size: 'auto', color: white, bgcolor: 0x000000, png64: logoPng } },
+      logo_test: { ...make('Fullscreen logo signal test', '', 'display', { displayMode: 'logo' }, 'display', { mode: 'logo' }), style: { text: '', size: 'auto', color: white, bgcolor: 0x000000, png64: logoTestPng } },
       plus60: make('+1 minute', '+1 MIN', 'adjust', { duration: '01:00', direction: 'add' }),
       minus60: make('-1 minute', '-1 MIN', 'adjust', { duration: '01:00', direction: 'subtract' }),
       plus10: make('+10 seconds', '+10 SEK', 'adjust', { duration: '00:10', direction: 'add' }),
@@ -279,7 +285,7 @@ export default class MoosTimer extends InstanceBase {
     }
     const sections = [
       { id: 'transport', name: 'Timersteuerung', definitions: ['start', 'pause', 'toggle', 'reset'] },
-      { id: 'display', name: 'Anzeige', definitions: ['timer', 'clock', 'blackout', 'blink', 'white', 'logo'] },
+      { id: 'display', name: 'Anzeige', definitions: ['timer', 'clock', 'blackout', 'logo_test', 'blink', 'white', 'logo'] },
       { id: 'adjustments', name: 'Zeitkorrektur', definitions: ['plus60', 'minus60', 'plus10', 'minus10'] },
       { id: 'status', name: 'Live-Zeitanzeige', definitions: ['time', 'hours', 'minutes', 'seconds'] },
       { id: 'fixed', name: 'Feste Zeiten', definitions: fixed.map(([,seconds]) => `fixed_${seconds}`) },
