@@ -1,0 +1,27 @@
+{
+  "id": "moostimer",
+  "name": "MoosTimer",
+  "shortname": "MoosTimer",
+  "description": "Control MoosTimer countdown and presentation modes",
+  "manufacturer": "MoosTimer",
+  "products": [
+    "MoosTimer"
+  ],
+  "keywords": [
+    "countdown",
+    "timer",
+    "event",
+    "show"
+  ],
+  "version": "0.0.0",
+  "license": "MIT",
+  "repository": "git+https://github.com/TARemem/companion-module-moostimer.git",
+  "bugs": "https://github.com/TARemem/companion-module-moostimer/issues",
+  "maintainers": [],
+  "runtime": {
+    "type": "node22",
+    "api": "nodejs-ipc",
+    "apiVersion": "0.0.0",
+    "entrypoint": "../main.js"
+  }
+}

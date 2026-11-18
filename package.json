@@ -1,0 +1,27 @@
+{
+  "name": "companion-module-moostimer",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "main": "main.js",
+  "license": "MIT",
+  "description": "MoosTimer integration for Bitfocus Companion",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TARemem/companion-module-moostimer.git"
+  },
+  "scripts": {
+    "check": "node --check main.js",
+    "package": "companion-module-build",
+    "verify": "companion-module-check"
+  },
+  "dependencies": {
+    "@companion-module/base": "^2.0.4"
+  },
+  "devDependencies": {
+    "@companion-module/tools": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
