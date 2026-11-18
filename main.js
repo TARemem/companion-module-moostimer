@@ -111,6 +111,7 @@ export default class MoosTimer extends InstanceBase {
       seconds: splitTime(state.ms).seconds,
       timer_color: '#' + timerColor(state).toString(16).padStart(6, '0'),
       logo_visible: state.settings?.showLogo ? 'Yes' : 'No',
+      paused: state.running ? 'No' : 'Yes',
     })
     this.checkFeedbacks('running', 'paused', 'display', 'blinking', 'countmode', 'timercolor', 'logo')
     const signature = JSON.stringify((state.presets || []).map(p => [p.name, p.seconds]))
@@ -139,6 +140,15 @@ export default class MoosTimer extends InstanceBase {
     ]
     const actions = Object.fromEntries(simple.map(([id, name]) => [id, { name, options: [], callback: () => this.command(id) }]))
     actions.logo = { name: 'Toggle presentation logo (requires MoosTimer 1.0.12+)', options: [], callback: () => this.command('toggleLogo') }
+    // Toggle between fullscreen logo and the regular timer view.
+    actions.logo_test_toggle = {
+      name: 'Toggle fullscreen logo test / timer', options: [],
+      callback: () => this.command('displayMode', { displayMode: this.state?.displayMode === 'logo' ? 'timer' : 'logo' }),
+    }
+    actions.countmode_toggle = {
+      name: 'Toggle countdown / count up', options: [],
+      callback: () => this.command('mode', { mode: this.state?.mode === 'up' ? 'down' : 'up' }),
+    }
     actions.display = {
       name: 'Set presentation display mode',
       options: [{ id: 'displayMode', type: 'dropdown', label: 'Display', default: 'timer', choices: [
@@ -232,6 +242,7 @@ export default class MoosTimer extends InstanceBase {
       seconds: { name: 'Seconds (SS)' },
       timer_color: { name: 'Timer color (hex)' },
       logo_visible: { name: 'Presentation logo visible' },
+      paused: { name: 'Paused status' },
     })
   }
   initPresets() {
@@ -259,11 +270,13 @@ export default class MoosTimer extends InstanceBase {
       blink: make('Blink', 'BLINKEN', 'blink', {}, 'blinking'),
       white: make('Force white', 'WEISS', 'white'),
       logo: { ...make('Toggle small presentation logo', '', 'logo', {}, 'logo'), style: { text: '', size: 'auto', color: white, bgcolor: 0x000000, png64: logoPng } },
-      logo_test: { ...make('Fullscreen logo signal test', '', 'display', { displayMode: 'logo' }, 'display', { mode: 'logo' }), style: { text: '', size: 'auto', color: white, bgcolor: 0x000000, png64: logoTestPng } },
+      logo_test: { ...make('Fullscreen logo signal test (toggle)', '', 'logo_test_toggle', {}, 'display', { mode: 'logo' }), style: { text: '', size: 'auto', color: white, bgcolor: 0x000000, png64: logoTestPng } },
       plus60: make('+1 minute', '+1 MIN', 'adjust', { duration: '01:00', direction: 'add' }),
       minus60: make('-1 minute', '-1 MIN', 'adjust', { duration: '01:00', direction: 'subtract' }),
       plus10: make('+10 seconds', '+10 SEK', 'adjust', { duration: '00:10', direction: 'add' }),
       minus10: make('-10 seconds', '-10 SEK', 'adjust', { duration: '00:10', direction: 'subtract' }),
+      endtime: { type: 'simple', name: 'Expected end time', style: { text: 'ENDE\n$(moostimer:end_time)', size: 'auto', color: white, bgcolor: dark }, steps: [{ down: [], up: [] }], feedbacks: [] },
+      countmode_toggle: make('Toggle count direction', '$(moostimer:mode)', 'countmode_toggle', {}, 'countmode', { mode: 'up' }),
       time: time('Full live timer', '$(moostimer:remaining)'),
       hours: time('Hours', '$(moostimer:hours)'),
       minutes: time('Minutes', '$(moostimer:minutes)'),
@@ -283,10 +296,10 @@ export default class MoosTimer extends InstanceBase {
       dynamic.push(key)
     }
     const sections = [
-      { id: 'transport', name: 'Timersteuerung', definitions: ['start', 'pause', 'toggle', 'reset'] },
+      { id: 'transport', name: 'Timersteuerung', definitions: ['start', 'pause', 'toggle', 'reset', 'countmode_toggle'] },
       { id: 'display', name: 'Anzeige', definitions: ['timer', 'clock', 'blackout', 'logo_test', 'blink', 'white', 'logo'] },
       { id: 'adjustments', name: 'Zeitkorrektur', definitions: ['plus60', 'minus60', 'plus10', 'minus10'] },
-      { id: 'status', name: 'Live-Zeitanzeige', definitions: ['time', 'hours', 'minutes', 'seconds'] },
+      { id: 'status', name: 'Live-Zeitanzeige', definitions: ['time', 'hours', 'minutes', 'seconds', 'endtime'] },
       { id: 'fixed', name: 'Feste Zeiten', definitions: fixed.map(([,seconds]) => `fixed_${seconds}`) },
       { id: 'saved', name: 'Gespeicherte MoosTimer-Presets', definitions: dynamic },
     ]

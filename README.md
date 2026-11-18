@@ -16,3 +16,10 @@ Quellcode im GitHub-Repository aktualisieren, GitHub Actions ausführen, das erz
 4. Bestehende Start/Pause/Reset-Buttons funktionieren.
 
 Hinweis: Der Build und die Ausführung in Companion wurden hier nicht durchgeführt; nur Syntax und Paketinhalt geprüft.
+
+## 0.1.7
+- Fullscreen-Logo-Test schaltet beim zweiten Drücken zurück auf Timer.
+- Beide Logo-Buttons haben Statusfeedback (kleines Logo: sichtbar; Logo-Test: Anzeigemodus aktiv).
+- Count-up/down-Umschalter als Preset, Status über `$(moostimer:mode)`.
+- Endzeit als eigener Button `$(moostimer:end_time)`.
+- Keine Änderungen an der Windows-App. Beschleunigung/Verlangsamung ist noch nicht implementiert.
