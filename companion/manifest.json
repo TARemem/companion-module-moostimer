@@ -1,7 +1,5 @@
 {
   "id": "moostimer",
-  "type": "connection",
-  "legacyIds": [],
   "name": "MoosTimer",
   "shortname": "MoosTimer",
   "description": "Control MoosTimer countdown and presentation modes",
@@ -25,5 +23,7 @@
     "api": "nodejs-ipc",
     "apiVersion": "0.0.0",
     "entrypoint": "../main.js"
-  }
+  },
+  "type": "connection",
+  "legacyIds": []
 }

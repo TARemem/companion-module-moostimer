@@ -5,9 +5,23 @@ const fmt = (ms) => {
   const secs = Math.floor(Math.abs(ms) / 1000)
   return `${negative}${String(Math.floor(secs / 3600)).padStart(2, '0')}:${String(Math.floor(secs / 60) % 60).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`
 }
-const options = [
-  { id: 'seconds', type: 'number', label: 'Seconds', default: 300, min: 0, max: 359999 },
-]
+// MM:SS or HH:MM:SS; no ambiguous plain seconds input.
+export function parseDuration(value) {
+  const input = String(value ?? '').trim()
+  const parts = input.split(':')
+  if (parts.length !== 2 && parts.length !== 3) throw new Error('Use MM:SS or HH:MM:SS (e.g. 05:00 or 01:05:22)')
+  if (!parts.every(part => /^\d+$/.test(part))) throw new Error('Time must contain digits and colons only')
+  if (parts.slice(1).some(part => part.length !== 2)) throw new Error('Minutes/seconds must have two digits')
+  const nums = parts.map(Number)
+  if (parts.length === 2) {
+    if (nums[1] > 59) throw new Error('Seconds must be 00–59')
+    return nums[0] * 60 + nums[1]
+  }
+  if (nums[1] > 59 || nums[2] > 59) throw new Error('Minutes and seconds must be 00–59')
+  return nums[0] * 3600 + nums[1] * 60 + nums[2]
+}
+const durationField = { id: 'duration', type: 'textinput', label: 'Duration (MM:SS or HH:MM:SS)', default: '05:00', useVariables: false }
+
 export default class MoosTimer extends InstanceBase {
   async init(config) {
     this.config = config
@@ -17,7 +31,8 @@ export default class MoosTimer extends InstanceBase {
     this.initActions()
     this.initFeedbacks()
     this.initVariables()
-   // this.initPresets()
+    // Button presets temporarily disabled until validated for Companion 5.x.
+    // All actions, feedbacks and variables remain available.
     this.startPolling()
   }
   async destroy() {
@@ -109,11 +124,32 @@ export default class MoosTimer extends InstanceBase {
       callback: (ev) => this.command('mode', { mode: ev.options.mode }),
     }
     actions.adjust = {
-      name: 'Adjust time (positive or negative seconds)',
-      options: [{ id: 'seconds', type: 'number', label: 'Adjustment (seconds)', default: 60, min: -86400, max: 86400 }],
-      callback: (ev) => this.command('adjust', { seconds: Number(ev.options.seconds) }),
+      name: 'Adjust time',
+      options: [
+        { ...durationField, default: '01:00', label: 'Adjustment (MM:SS or HH:MM:SS)' },
+        { id: 'direction', type: 'dropdown', label: 'Direction', default: 'add', choices: [
+          { id: 'add', label: 'Add time (+)' }, { id: 'subtract', label: 'Subtract time (-)' },
+        ] },
+      ],
+      callback: (ev) => {
+        try {
+          const seconds = parseDuration(ev.options.duration)
+          if (seconds > 86400) throw new Error('Adjustment may not exceed 24 hours')
+          return this.command('adjust', { seconds: ev.options.direction === 'subtract' ? -seconds : seconds })
+        } catch (e) { this.log('error', `Invalid time adjustment: ${e.message}`) }
+      },
     }
-    actions.set = { name: 'Set timer duration', options, callback: (ev) => this.command('set', { seconds: Number(ev.options.seconds) }) }
+    actions.set = {
+      name: 'Set timer duration',
+      options: [{ ...durationField }],
+      callback: (ev) => {
+        try {
+          const seconds = parseDuration(ev.options.duration)
+          if (seconds > 359999) throw new Error('Duration exceeds supported maximum')
+          return this.command('set', { seconds })
+        } catch (e) { this.log('error', `Invalid timer duration: ${e.message}`) }
+      },
+    }
     actions.preset = {
       name: 'Load MoosTimer preset by name',
       options: [{ id: 'name', type: 'textinput', label: 'Exact preset name', default: '5 Minuten', useVariables: false }],
@@ -145,7 +181,7 @@ export default class MoosTimer extends InstanceBase {
       },
     })
   }
-   initVariables() {
+  initVariables() {
     this.setVariableDefinitions({
       remaining: { name: 'Formatted remaining time' },
       remaining_seconds: { name: 'Remaining seconds' },
@@ -158,98 +194,26 @@ export default class MoosTimer extends InstanceBase {
     })
   }
   initPresets() {
-    const make = (
-      name,
-      text,
-      actionId,
-      actionOptions = {},
-      feedbackId,
-      feedbackOptions = {}
-    ) => ({
-      type: 'button',
-      category: 'MoosTimer',
-      name,
-      options: {},
-      style: {
-        text,
-        size: 'auto',
-        color: 0xffffff,
-        bgcolor: 0x232b36,
-      },
-      steps: [
-        {
-          down: [{ actionId, options: actionOptions }],
-          up: [],
-        },
-      ],
-      feedbacks: feedbackId
-        ? [
-            {
-              feedbackId,
-              options: feedbackOptions,
-              style: {
-                bgcolor: 0x168a58,
-                color: 0xffffff,
-              },
-            },
-          ]
-        : [],
+    const make = (name, text, actionId, actionOptions = {}, feedbackId, feedbackOptions = {}) => ({
+      type: 'button', category: 'MoosTimer', name,
+      style: { text, size: 'auto', color: 0xffffff, bgcolor: 0x232b36 },
+      steps: [{ down: [{ actionId, options: actionOptions }], up: [] }],
+      feedbacks: feedbackId ? [{ feedbackId, options: feedbackOptions, style: { bgcolor: 0x168a58, color: 0xffffff } }] : [],
     })
-
     this.setPresetDefinitions({
       start: make('Start', '▶ START', 'start', {}, 'running'),
       pause: make('Pause', 'Ⅱ PAUSE', 'pause'),
       toggle: make('Start / Pause', 'START / PAUSE', 'toggle', {}, 'running'),
       reset: make('Reset', '↺ RESET', 'reset'),
-
-      timer: make(
-        'Timer display',
-        'TIMER',
-        'display',
-        { displayMode: 'timer' },
-        'display',
-        { mode: 'timer' }
-      ),
-
-      clock: make(
-        'Clock display',
-        'UHRZEIT',
-        'display',
-        { displayMode: 'clock' },
-        'display',
-        { mode: 'clock' }
-      ),
-
-      blackout: make(
-        'Blackout',
-        'BLACKOUT',
-        'display',
-        { displayMode: 'blackout' },
-        'display',
-        { mode: 'blackout' }
-      ),
-
+      timer: make('Timer display', 'TIMER', 'display', { displayMode: 'timer' }, 'display', { mode: 'timer' }),
+      clock: make('Clock display', 'UHRZEIT', 'display', { displayMode: 'clock' }, 'display', { mode: 'clock' }),
+      blackout: make('Blackout', 'BLACKOUT', 'display', { displayMode: 'blackout' }, 'display', { mode: 'blackout' }),
       blink: make('Blink', 'BLINKEN', 'blink', {}, 'blinking'),
-
-      plus60: make('+1 minute', '+1 MIN', 'adjust', { seconds: 60 }),
-      minus60: make('-1 minute', '-1 MIN', 'adjust', { seconds: -60 }),
-      plus10: make('+10 seconds', '+10 SEK', 'adjust', { seconds: 10 }),
-      minus10: make('-10 seconds', '-10 SEK', 'adjust', { seconds: -10 }),
-
-      time: {
-        type: 'button',
-        category: 'MoosTimer',
-        name: 'Live timer',
-        options: {},
-        style: {
-          text: '$(moostimer:remaining)',
-          size: 'auto',
-          color: 0xffffff,
-          bgcolor: 0x232b36,
-        },
-        steps: [],
-        feedbacks: [],
-      },
+      plus60: make('+1 minute', '+1 MIN', 'adjust', { duration: '01:00', direction: 'add' }),
+      minus60: make('-1 minute', '-1 MIN', 'adjust', { duration: '01:00', direction: 'subtract' }),
+      plus10: make('+10 seconds', '+10 SEK', 'adjust', { duration: '00:10', direction: 'add' }),
+      minus10: make('-10 seconds', '-10 SEK', 'adjust', { duration: '00:10', direction: 'subtract' }),
+      time: { type: 'button', category: 'MoosTimer', name: 'Live timer', style: { text: '$(moostimer:remaining)', size: 'auto', color: 0xffffff, bgcolor: 0x232b36 }, steps: [], feedbacks: [] },
     })
   }
 }

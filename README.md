@@ -27,3 +27,9 @@ Start MoosTimer and enter its LAN IP or `127.0.0.1` if both applications run on 
 - Before public submission, add a maintainer contact and validate manifest with the Bitfocus tooling.
 
 See https://companion.free/for-developers/module-development/ for official guidance.
+
+## Version 0.1.2
+
+The **Set timer duration** and **Adjust time** actions now accept `MM:SS` or `HH:MM:SS`, such as `05:00` and `01:05:22`. Adjust time includes an Add/Subtract dropdown. Invalid values are logged and do not send a command.
+
+**Known limitation:** The built-in button presets remain disabled while the Companion 5.x preset schema is being corrected. Actions, feedbacks and variables are available for manually configured buttons.
