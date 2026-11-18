@@ -158,26 +158,99 @@ export default class MoosTimer extends InstanceBase {
     })
   }
   initPresets() {
-    const make = (name, text, actionId, actionOptions = {}, feedbackId, feedbackOptions = {}) => ({
-      type: 'button', category: 'MoosTimer', name,
-      style: { text, size: 'auto', color: 0xffffff, bgcolor: 0x232b36 },
-      steps: [{ down: [{ actionId, options: actionOptions }], up: [] }],
-      feedbacks: feedbackId ? [{ feedbackId, options: feedbackOptions, style: { bgcolor: 0x168a58, color: 0xffffff } }] : [],
+    const make = (
+      name,
+      text,
+      actionId,
+      actionOptions = {},
+      feedbackId,
+      feedbackOptions = {}
+    ) => ({
+      type: 'button',
+      category: 'MoosTimer',
+      name,
+      options: {},
+      style: {
+        text,
+        size: 'auto',
+        color: 0xffffff,
+        bgcolor: 0x232b36,
+      },
+      steps: [
+        {
+          down: [{ actionId, options: actionOptions }],
+          up: [],
+        },
+      ],
+      feedbacks: feedbackId
+        ? [
+            {
+              feedbackId,
+              options: feedbackOptions,
+              style: {
+                bgcolor: 0x168a58,
+                color: 0xffffff,
+              },
+            },
+          ]
+        : [],
     })
+
     this.setPresetDefinitions({
       start: make('Start', '▶ START', 'start', {}, 'running'),
       pause: make('Pause', 'Ⅱ PAUSE', 'pause'),
       toggle: make('Start / Pause', 'START / PAUSE', 'toggle', {}, 'running'),
       reset: make('Reset', '↺ RESET', 'reset'),
-      timer: make('Timer display', 'TIMER', 'display', { displayMode: 'timer' }, 'display', { mode: 'timer' }),
-      clock: make('Clock display', 'UHRZEIT', 'display', { displayMode: 'clock' }, 'display', { mode: 'clock' }),
-      blackout: make('Blackout', 'BLACKOUT', 'display', { displayMode: 'blackout' }, 'display', { mode: 'blackout' }),
+
+      timer: make(
+        'Timer display',
+        'TIMER',
+        'display',
+        { displayMode: 'timer' },
+        'display',
+        { mode: 'timer' }
+      ),
+
+      clock: make(
+        'Clock display',
+        'UHRZEIT',
+        'display',
+        { displayMode: 'clock' },
+        'display',
+        { mode: 'clock' }
+      ),
+
+      blackout: make(
+        'Blackout',
+        'BLACKOUT',
+        'display',
+        { displayMode: 'blackout' },
+        'display',
+        { mode: 'blackout' }
+      ),
+
       blink: make('Blink', 'BLINKEN', 'blink', {}, 'blinking'),
+
       plus60: make('+1 minute', '+1 MIN', 'adjust', { seconds: 60 }),
       minus60: make('-1 minute', '-1 MIN', 'adjust', { seconds: -60 }),
       plus10: make('+10 seconds', '+10 SEK', 'adjust', { seconds: 10 }),
       minus10: make('-10 seconds', '-10 SEK', 'adjust', { seconds: -10 }),
-      time: { type: 'button', category: 'MoosTimer', name: 'Live timer', style: { text: '$(moostimer:remaining)', size: 'auto', color: 0xffffff, bgcolor: 0x232b36 }, steps: [], feedbacks: [] },
+
+      time: {
+        type: 'button',
+        category: 'MoosTimer',
+        name: 'Live timer',
+        options: {},
+        style: {
+          text: '$(moostimer:remaining)',
+          size: 'auto',
+          color: 0xffffff,
+          bgcolor: 0x232b36,
+        },
+        steps: [],
+        feedbacks: [],
+      },
     })
+  }
   }
 }
