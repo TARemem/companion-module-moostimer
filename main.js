@@ -31,8 +31,7 @@ export default class MoosTimer extends InstanceBase {
     this.initActions()
     this.initFeedbacks()
     this.initVariables()
-    // Button presets temporarily disabled until validated for Companion 5.x.
-    // All actions, feedbacks and variables remain available.
+    this.initPresets()
     this.startPolling()
   }
   async destroy() {
@@ -194,17 +193,22 @@ export default class MoosTimer extends InstanceBase {
     })
   }
   initPresets() {
+    // Companion module API 2.x expects two arguments: section structure and preset map.
+    const white = 0xffffff
+    const dark = 0x232b36
+    const green = 0x168a58
     const make = (name, text, actionId, actionOptions = {}, feedbackId, feedbackOptions = {}) => ({
-      type: 'button', category: 'MoosTimer', name,
-      style: { text, size: 'auto', color: 0xffffff, bgcolor: 0x232b36 },
+      type: 'simple',
+      name,
+      style: { text, size: 'auto', color: white, bgcolor: dark },
       steps: [{ down: [{ actionId, options: actionOptions }], up: [] }],
-      feedbacks: feedbackId ? [{ feedbackId, options: feedbackOptions, style: { bgcolor: 0x168a58, color: 0xffffff } }] : [],
+      feedbacks: feedbackId ? [{ feedbackId, options: feedbackOptions, style: { bgcolor: green, color: white } }] : [],
     })
-    this.setPresetDefinitions({
+    const presets = {
       start: make('Start', '▶ START', 'start', {}, 'running'),
       pause: make('Pause', 'Ⅱ PAUSE', 'pause'),
       toggle: make('Start / Pause', 'START / PAUSE', 'toggle', {}, 'running'),
-      reset: make('Reset', '↺ RESET', 'reset'),
+      reset: make('Reset immediately', '↺ RESET', 'reset'),
       timer: make('Timer display', 'TIMER', 'display', { displayMode: 'timer' }, 'display', { mode: 'timer' }),
       clock: make('Clock display', 'UHRZEIT', 'display', { displayMode: 'clock' }, 'display', { mode: 'clock' }),
       blackout: make('Blackout', 'BLACKOUT', 'display', { displayMode: 'blackout' }, 'display', { mode: 'blackout' }),
@@ -213,7 +217,20 @@ export default class MoosTimer extends InstanceBase {
       minus60: make('-1 minute', '-1 MIN', 'adjust', { duration: '01:00', direction: 'subtract' }),
       plus10: make('+10 seconds', '+10 SEK', 'adjust', { duration: '00:10', direction: 'add' }),
       minus10: make('-10 seconds', '-10 SEK', 'adjust', { duration: '00:10', direction: 'subtract' }),
-      time: { type: 'button', category: 'MoosTimer', name: 'Live timer', style: { text: '$(moostimer:remaining)', size: 'auto', color: 0xffffff, bgcolor: 0x232b36 }, steps: [], feedbacks: [] },
-    })
+      time: {
+        type: 'simple',
+        name: 'Live remaining time',
+        style: { text: '$(moostimer:remaining)', size: 'auto', color: white, bgcolor: dark },
+        steps: [{ down: [], up: [] }],
+        feedbacks: [],
+      },
+    }
+    const sections = [
+      { id: 'transport', name: 'Timersteuerung', definitions: ['start', 'pause', 'toggle', 'reset'] },
+      { id: 'display', name: 'Anzeige', definitions: ['timer', 'clock', 'blackout', 'blink'] },
+      { id: 'adjustments', name: 'Zeitkorrektur', definitions: ['plus60', 'minus60', 'plus10', 'minus10'] },
+      { id: 'status', name: 'Status', definitions: ['time'] },
+    ]
+    this.setPresetDefinitions(sections, presets)
   }
 }

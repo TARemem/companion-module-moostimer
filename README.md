@@ -33,3 +33,11 @@ See https://companion.free/for-developers/module-development/ for official guida
 The **Set timer duration** and **Adjust time** actions now accept `MM:SS` or `HH:MM:SS`, such as `05:00` and `01:05:22`. Adjust time includes an Add/Subtract dropdown. Invalid values are logged and do not send a command.
 
 **Known limitation:** The built-in button presets remain disabled while the Companion 5.x preset schema is being corrected. Actions, feedbacks and variables are available for manually configured buttons.
+
+
+## Version 0.1.3 – Companion-Presets
+
+Die Presets sind nach Companion-Modul-API 2.x aufgebaut (`setPresetDefinitions(sections, presets)`, Typ `simple`).
+Im Companion-Tab **Buttons → Presets** stehen die Kategorien Timersteuerung, Anzeige, Zeitkorrektur und Status bereit.
+Reset erfolgt ohne Rückfrage. Zeiteingaben für Aktionen verwenden MM:SS oder HH:MM:SS.
+Die Presets sind noch nicht in Companion 5.1.2 live getestet.
