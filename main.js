@@ -52,7 +52,7 @@ export default class MoosTimer extends InstanceBase {
     this.initActions()
     this.initFeedbacks()
     this.initVariables()
-    this.initPresets()
+   // this.initPresets()
     this.startPolling()
   }
   async destroy() {
