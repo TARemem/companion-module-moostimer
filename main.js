@@ -145,17 +145,17 @@ export default class MoosTimer extends InstanceBase {
       },
     })
   }
-  initVariables() {
-    this.setVariableDefinitions([
-      { variableId: 'remaining', name: 'Formatted remaining time' },
-      { variableId: 'remaining_seconds', name: 'Remaining seconds' },
-      { variableId: 'mode', name: 'Count direction' },
-      { variableId: 'display_mode', name: 'Display mode' },
-      { variableId: 'running', name: 'Run status' },
-      { variableId: 'blinking', name: 'Blink status' },
-      { variableId: 'end_time', name: 'End time' },
-      { variableId: 'preset_count', name: 'Number of presets' },
-    ])
+   initVariables() {
+    this.setVariableDefinitions({
+      remaining: { name: 'Formatted remaining time' },
+      remaining_seconds: { name: 'Remaining seconds' },
+      mode: { name: 'Count direction' },
+      display_mode: { name: 'Display mode' },
+      running: { name: 'Run status' },
+      blinking: { name: 'Blink status' },
+      end_time: { name: 'End time' },
+      preset_count: { name: 'Number of presets' },
+    })
   }
   initPresets() {
     const make = (name, text, actionId, actionOptions = {}, feedbackId, feedbackOptions = {}) => ({
