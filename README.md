@@ -1,3 +1,7 @@
+# MoosTimer Companion 0.1.8
+
+Logo presets now use inset images with transparent margins for active green background feedback. Count Up/Down toggle uses green for up and red for down; separate Count Up and Count Down presets use green only when active. Replace existing affected buttons with the new presets. Windows 1.0.13 unchanged.
+
 # MoosTimer Companion 0.1.6
 
 Basiert auf 0.1.4. Behebt die externe PNG-Datei-Abhängigkeit von 0.1.5: beide Logo-Bilder sind direkt in main.js eingebettet und werden vom Companion-Build nicht mehr als separate Dateien benötigt.
