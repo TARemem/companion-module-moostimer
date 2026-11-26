@@ -113,7 +113,7 @@ export default class MoosTimer extends InstanceBase {
       logo_visible: state.settings?.showLogo ? 'Yes' : 'No',
       paused: state.running ? 'No' : 'Yes',
     })
-    this.checkFeedbacks('running', 'paused', 'display', 'blinking', 'countmode', 'timercolor', 'logo')
+    this.checkFeedbacks('running', 'paused', 'display', 'blinking', 'countmode', 'timercolor', 'logo', 'message')
     const signature = JSON.stringify((state.presets || []).map(p => [p.name, p.seconds]))
     if (signature !== this.presetSignature) {
       this.presetSignature = signature
@@ -127,7 +127,7 @@ export default class MoosTimer extends InstanceBase {
       if (this.inFlight) return
       this.inFlight = true
       try { this.updateState(await this.request('/api/state')) }
-      catch (e) { this.state = null; this.updateStatus(InstanceStatus.ConnectionFailure, e.message); this.checkFeedbacks('running', 'paused', 'display', 'blinking', 'countmode', 'timercolor', 'logo') }
+      catch (e) { this.state = null; this.updateStatus(InstanceStatus.ConnectionFailure, e.message); this.checkFeedbacks('running', 'paused', 'display', 'blinking', 'countmode', 'timercolor', 'logo', 'message') }
       finally { this.inFlight = false }
     }
     void poll()
@@ -139,6 +139,10 @@ export default class MoosTimer extends InstanceBase {
       ['reset', 'Reset immediately (no confirmation)'], ['blink', 'Toggle blink'], ['white', 'Toggle force white'],
     ]
     const actions = Object.fromEntries(simple.map(([id, name]) => [id, { name, options: [], callback: () => this.command(id) }]))
+    actions.message = {name:'Toggle message',options:[],callback:()=>this.command('toggleMessage')}
+    actions.message_show = {name:'Show message',options:[],callback:()=>this.command('showMessage')}
+    actions.message_hide = {name:'Hide message',options:[],callback:()=>this.command('hideMessage')}
+    actions.message_send = {name:'Send message',options:[{id:'text',type:'textinput',label:'Message',default:'',useVariables:false}],callback:ev=>this.command('sendMessage',{text:String(ev.options.text)})}
     actions.logo = { name: 'Toggle presentation logo (requires MoosTimer 1.0.12+)', options: [], callback: () => this.command('toggleLogo') }
     // Toggle between fullscreen logo and the regular timer view.
     actions.logo_test_toggle = {
@@ -208,6 +212,7 @@ export default class MoosTimer extends InstanceBase {
       running: bool('Timer is running', () => !!this.state?.running),
       blinking: bool('Timer is blinking', () => !!this.state?.blinking),
       paused: bool('Timer is paused', () => !!this.state && !this.state.running),
+      message: bool('Message is visible',()=>!!this.state?.messageVisible),
       logo: bool('Presentation logo is visible', () => !!this.state?.settings?.showLogo),
       timercolor: {
         type: 'advanced', name: 'Live timer color (uses presentation colors)', options: [],
@@ -260,6 +265,9 @@ export default class MoosTimer extends InstanceBase {
       feedbacks: [{ feedbackId: 'timercolor', options: {} }],
     })
     const presets = {
+      message: make('Toggle message','MESSAGE','message',{},'message'),
+      message_show: make('Show message','SHOW MSG','message_show',{},'message'),
+      message_hide: make('Hide message','HIDE MSG','message_hide'),
       start: make('Start', '▶ START', 'start', {}, 'running'),
       pause: make('Pause', 'Ⅱ PAUSE', 'pause', {}, 'paused'),
       toggle: make('Start / Pause', 'START / PAUSE', 'toggle', {}, 'running'),
@@ -280,8 +288,8 @@ export default class MoosTimer extends InstanceBase {
         ...make('Count Up/Down', 'Count Up/Down', 'countmode_toggle'),
         style: { text: 'Count Up/Down', size: 'auto', color: white, bgcolor: 0x000000 },
         feedbacks: [
-          { feedbackId: 'countmode', options: { mode: 'up' }, style: { bgcolor: green, color: white } },
-          { feedbackId: 'countmode', options: { mode: 'down' }, style: { bgcolor: 0xb72c35, color: white } },
+          { feedbackId: 'countmode', options: { mode: 'up' }, style: { bgcolor: 0xb72c35, color: white } },
+          { feedbackId: 'countmode', options: { mode: 'down' }, style: { bgcolor: green, color: white } },
         ],
       },
       countmode_up: { ...make('Count Up', 'Count Up', 'countmode', { mode: 'up' }, 'countmode', { mode: 'up' }), style: { text: 'Count Up', size: 'auto', color: white, bgcolor: 0x000000 } },
@@ -306,7 +314,7 @@ export default class MoosTimer extends InstanceBase {
     }
     const sections = [
       { id: 'transport', name: 'Timersteuerung', definitions: ['start', 'pause', 'toggle', 'reset', 'countmode_toggle', 'countmode_up', 'countmode_down'] },
-      { id: 'display', name: 'Anzeige', definitions: ['timer', 'clock', 'blackout', 'logo_test', 'blink', 'white', 'logo'] },
+      { id: 'display', name: 'Anzeige', definitions: ['timer', 'clock', 'blackout', 'logo_test', 'blink', 'white', 'logo', 'message', 'message_show', 'message_hide'] },
       { id: 'adjustments', name: 'Zeitkorrektur', definitions: ['plus60', 'minus60', 'plus10', 'minus10'] },
       { id: 'status', name: 'Live-Zeitanzeige', definitions: ['time', 'hours', 'minutes', 'seconds', 'endtime'] },
       { id: 'fixed', name: 'Feste Zeiten', definitions: fixed.map(([,seconds]) => `fixed_${seconds}`) },

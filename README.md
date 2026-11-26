@@ -27,3 +27,6 @@ Hinweis: Der Build und die Ausführung in Companion wurden hier nicht durchgefü
 - Count-up/down-Umschalter als Preset, Status über `$(moostimer:mode)`.
 - Endzeit als eigener Button `$(moostimer:end_time)`.
 - Keine Änderungen an der Windows-App. Beschleunigung/Verlangsamung ist noch nicht implementiert.
+
+## 0.1.9
+Requires MoosTimer 1.0.14 for message actions. Message toggle, show and hide presets; Send message action accepts text. Green feedback indicates actual message visibility. Count Up/Down toggle: countdown green, count up red. Separate direction presets unchanged. Replace existing toggle preset to update its colors.
